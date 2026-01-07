@@ -80,7 +80,11 @@ public final class DicdataStore {
                 if identifier == "user" || identifier == "memory" {
                     continue
                 }
-                loudses[identifier] = LOUDS.load(identifier, dictionaryURL: self.dictionaryURL)
+                // Fix: Also mark as imported so loadLOUDS finds the cached data
+                if let louds = LOUDS.load(identifier, dictionaryURL: self.dictionaryURL) {
+                    loudses[identifier] = louds
+                    importedLoudses.insert(identifier)
+                }
             case "loudstxt3":
                 if let data = try? Data(contentsOf: url) {
                     loudstxts[identifier] = data
@@ -485,9 +489,9 @@ public final class DicdataStore {
             }
         }
         for (key, value) in dict {
-            // Default dictionary shards are stored under escaped identifiers with concatenated shard suffix
-            let escaped = DictionaryBuilder.escapedIdentifier(identifier)
-            let fileID = "\(escaped)\(key)"
+            // Fix: Use raw identifier for dictionary files with Japanese filenames
+            // (escaped identifiers like [30CB] are only used when building new dictionaries)
+            let fileID = "\(identifier)\(key)"
             data.append(contentsOf: LOUDS.getDataForLoudstxt3(
                 fileID,
                 indices: value.map { $0 & DictionaryBuilder.localMask },
